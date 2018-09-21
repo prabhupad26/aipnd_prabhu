@@ -1,6 +1,8 @@
 # aipnd_prabhu
 sample cmd to run :
 python train.py flowers/ --gpu --arch vgg16
+
+
 python predict.py flowers/test/10/image_07090.jpg checkpoint --gpu --top_k 5
 
 predict.py will generate:

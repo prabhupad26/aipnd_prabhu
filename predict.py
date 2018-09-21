@@ -19,6 +19,7 @@ def main():
     prediction.numpy()[0] = [idx_to_class[x] for x in prediction.numpy()[0]]
     top_classes = [label_to_name_json[str(x)] for x in  prediction.numpy()[0]]
     top_probabilities = probability.numpy()[0]
+    print('predicted flower name :'+str(top_classes[0]))
     print('PROBABILITY'+' '+'PREDICTION')
     for probability, prediction in zip(top_probabilities ,top_classes):
         print(str(probability)+' : '+str(prediction))

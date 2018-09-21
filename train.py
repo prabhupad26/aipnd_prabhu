@@ -10,18 +10,18 @@ def main():
     input_arguments = input_argparse()
     device = device_in_use(gpu_ind = input_arguments.gpu)
     model_mode = ['train', 'valid', 'test']
-    model = build_model(hidden_units = input_arguments.hidden_units)
+    model = build_model()
     train_model(data_dir=input_arguments.data_dir, model = model, device= device, model_mode = model_mode, learning_rate = input_arguments.learning_rate)
-def build_model(hidden_units = 500):
+def build_model():
     '''Download the pretrained model'''
     model = models.vgg16(pretrained=True)
     'Freeze the parameters'
     for param in model.parameters():
         param.requires_grad = False
     classifier = nn.Sequential(OrderedDict([
-                          ('fc1', nn.Linear(25088, hidden_units)),
+                          ('fc1', nn.Linear(25088, 512)),
                           ('relu', nn.ReLU(inplace=True)),
-                          ('fc2', nn.Linear(hidden_units, 102)),
+                          ('fc2', nn.Linear(512, 102)),
                           ('output', nn.LogSoftmax(dim=1))
                           ]))
     model.classifier = classifier
@@ -128,7 +128,7 @@ def train_model(device, model, model_mode, data_dir='flowers/', step = 0 ,epochs
                         running_corrects = 0
                         model.train()
     run_accuracy_check(device= device, model=model , inputs = dataloaders[model_mode[1]])
-    print("Saving the model...")
+    print("Saving the model")
     save_checkpoint(model = model,optimizer= optimizer,epochs = epochs,image_input = image_datasets[model_mode[2]])
 def device_in_use(gpu_ind= True):
     if gpu_ind and torch.cuda.is_available():

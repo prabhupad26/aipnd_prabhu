@@ -128,7 +128,7 @@ def train_model(device, model, model_mode, data_dir='flowers/', step = 0 ,epochs
                         running_corrects = 0
                         model.train()
     run_accuracy_check(device= device, model=model , inputs = dataloaders[model_mode[1]])
-    print("Saving the model")
+    print("Saving the model...")
     save_checkpoint(model = model,optimizer= optimizer,epochs = epochs,image_input = image_datasets[model_mode[2]])
 def device_in_use(gpu_ind= True):
     if gpu_ind and torch.cuda.is_available():

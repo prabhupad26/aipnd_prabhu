@@ -10,8 +10,7 @@ def main():
     im = Image.open(input_arguments.input_image_path)
     device = train.device_in_use(gpu_ind=input_arguments.gpu)
     label_to_name_json = cat_to_name_conv()
-    model= train.build_model()
-    model = train.load_checkpoint(checkpoint_loc = input_arguments.checkpoint_name+'.pth',model=model)
+    model = train.load_checkpoint(checkpoint_loc = input_arguments.checkpoint_name+'.pth')
     probability, prediction = predict(image_path = im, model = model,topk=input_arguments.top_k , device = device)
     probability = probability.to('cpu')
     prediction = prediction.to('cpu')
@@ -39,15 +38,25 @@ def cat_to_name_conv():
         cat_to_name = json.load(f)
     return cat_to_name
 def process_image(image):
+    size = 256, 256
+    width = image.width
+    height = image.height
+    if width > height:
+        ratio = float(width) / float(height)
+        newheight = ratio * size[0]
+        image = image.resize((size[0], int(np.floor(newheight))), Image.ANTIALIAS)
+    else:
+        ratio = float(height) / float(width)
+        newwidth = ratio * size[0]
+        image = image.resize((int(np.floor(newwidth)), size[0]), Image.ANTIALIAS)
     normalize = transforms.Normalize(
-       mean=[0.485, 0.456, 0.406],
-       std=[0.229, 0.224, 0.225]
-        )
+        mean=[0.485, 0.456, 0.406],
+        std=[0.229, 0.224, 0.225]
+    )
     preprocess = transforms.Compose([
-       transforms.Resize(256),
-       transforms.CenterCrop(224),
-       transforms.ToTensor(),
-       normalize
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        normalize
     ])
     image_tensor = preprocess(image)
     return image_tensor

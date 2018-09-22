@@ -10,33 +10,42 @@ def main():
     input_arguments = input_argparse()
     device = device_in_use(gpu_ind = input_arguments.gpu)
     model_mode = ['train', 'valid', 'test']
-    model = build_model()
-    train_model(data_dir=input_arguments.data_dir, model = model, device= device, model_mode = model_mode, learning_rate = input_arguments.learning_rate)
-def build_model():
+    model_name = input_arguments.arch
+    model = build_model(model_name = model_name, hidden_units=input_arguments.hidden_units)
+    train_model(data_dir=input_arguments.data_dir, model = model, device= device, model_mode = model_mode,
+                learning_rate = input_arguments.learning_rate,model_name= model_name, hidden_units = input_arguments.hidden_units)
+def build_model(model_name = 'vgg16', hidden_units = 512):
     '''Download the pretrained model'''
-    model = models.vgg16(pretrained=True)
-    'Freeze the parameters'
-    for param in model.parameters():
-        param.requires_grad = False
+    if (model_name == 'vgg16'):
+        model = models.vgg16(pretrained=True)
+        'Freeze the parameters'
+        for param in model.parameters():
+            param.requires_grad = False
     classifier = nn.Sequential(OrderedDict([
-                          ('fc1', nn.Linear(25088, 512)),
+                          ('fc1', nn.Linear(25088, hidden_units)),
                           ('relu', nn.ReLU(inplace=True)),
-                          ('fc2', nn.Linear(512, 102)),
+                          ('dropout', nn.Dropout(0.5)),
+                          ('fc2', nn.Linear(hidden_units, 102)),
                           ('output', nn.LogSoftmax(dim=1))
                           ]))
     model.classifier = classifier
     return model
-def save_checkpoint(model,optimizer,epochs,image_input):
+def save_checkpoint(model,optimizer,epochs,image_input,learning_rate, model_name,hidden_units):
     model.class_to_idx = image_input.class_to_idx
-    checkpoint = {'state_dict' : model.state_dict(),
-                  'optimizer_state' : optimizer.state_dict(),
-                  'epochs' : epochs,
-                  'class_to_idx': model.class_to_idx
-                 }
+    checkpoint = {'state_dict': model.state_dict(),
+                  'hidden_units':hidden_units,
+                  'optimizer_state': optimizer.state_dict(),
+                  'epochs': epochs,
+                  'class_to_idx': model.class_to_idx,
+                  'model_name': model_name,
+                  'learning_rate': learning_rate,
+                  }
     torch.save(checkpoint, 'checkpoint.pth')
 
-def load_checkpoint(checkpoint_loc = 'checkpoint.pth', model = build_model()):
+def load_checkpoint(checkpoint_loc = 'checkpoint.pth'):
     checkpoint = torch.load(checkpoint_loc)
+    model_name = checkpoint['model_name']
+    model = build_model(model_name=model_name , hidden_units= checkpoint['hidden_units'])
     model.load_state_dict(checkpoint['state_dict'])
     model.class_to_idx = checkpoint['class_to_idx']
     return model
@@ -64,29 +73,29 @@ def validation(model, inputs, criterion, device):
         equality = (label.data == ps.max(dim=1)[1])
         accuracy += equality.type(torch.FloatTensor).mean()
     return test_loss,accuracy
-def train_model(device, model, model_mode, data_dir='flowers/', step = 0 ,epochs = 3, print_every = 40, learning_rate = 0.001):
+def train_model(device, model, model_mode, model_name, hidden_units ,data_dir='flowers/', step = 0 ,epochs = 3, print_every = 40, learning_rate = 0.001):
     '''Define data transforms, image datasets and data loaders'''
-    train_dir = data_dir + 'train'
-    valid_dir = data_dir + 'valid'
-    test_dir = data_dir + 'test'
     data_transforms = {
-            'train':transforms.Compose([transforms.RandomResizedCrop(224),
-                                        transforms.RandomHorizontalFlip(),
-                                        transforms.ToTensor(),
-                                        transforms.Normalize([0.485, 0.456, 0.406],
-                                                             [0.229, 0.224, 0.225])]),
-            'valid':transforms.Compose([transforms.RandomResizedCrop(224),
-                                        transforms.RandomHorizontalFlip(),
-                                        transforms.ToTensor(),
-                                        transforms.Normalize([0.485, 0.456, 0.406],
-                                                             [0.229, 0.224, 0.225])]),
-            'test':transforms.Compose([transforms.Resize(256),
-                                       transforms.RandomHorizontalFlip(),
-                                       transforms.CenterCrop(224),
-                                       transforms.ToTensor(),
-                                       transforms.Normalize([0.485, 0.456, 0.406],
-                                                            [0.229, 0.224, 0.225])])
-        }
+        'train': transforms.Compose([
+            transforms.RandomRotation(30),
+            transforms.RandomResizedCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ]),
+        'valid': transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ]),
+        'test': transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ]),
+    }
     image_datasets = {x : datasets.ImageFolder(os.path.join(data_dir,x),data_transforms[x])
                       for x in model_mode
                       }
@@ -97,7 +106,7 @@ def train_model(device, model, model_mode, data_dir='flowers/', step = 0 ,epochs
     dataset_sizes = {x : len(image_datasets[x]) for x in ['train', 'valid', 'test']}
     model.to(device)
     criterion = nn.NLLLoss()
-    optimizer = optim.Adam(model.classifier.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.classifier.parameters(), lr=learning_rate)
     for e in range(epochs):
         model.train()
         running_loss = 0
@@ -129,7 +138,8 @@ def train_model(device, model, model_mode, data_dir='flowers/', step = 0 ,epochs
                         model.train()
     run_accuracy_check(device= device, model=model , inputs = dataloaders[model_mode[1]])
     print("Saving the model...")
-    save_checkpoint(model = model,optimizer= optimizer,epochs = epochs,image_input = image_datasets[model_mode[2]])
+    save_checkpoint(model = model,optimizer= optimizer,epochs = epochs,hidden_units =hidden_units,
+                    image_input = image_datasets[model_mode[2]], learning_rate = learning_rate, model_name = model_name)
 def device_in_use(gpu_ind= True):
     if gpu_ind and torch.cuda.is_available():
         return 'cuda'

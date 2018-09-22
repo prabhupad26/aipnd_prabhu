@@ -15,12 +15,9 @@ def main():
     train_model(data_dir=input_arguments.data_dir, model = model, device= device, model_mode = model_mode,
                 learning_rate = input_arguments.learning_rate,model_name= model_name, hidden_units = input_arguments.hidden_units)
 def build_model(model_name = 'vgg16', hidden_units = 512):
-    '''Download the pretrained model'''
-    if (model_name == 'vgg16'):
-        model = models.vgg16(pretrained=True)
-        'Freeze the parameters'
-        for param in model.parameters():
-            param.requires_grad = False
+    model = getattr(models, model_name)(pretrained=True)
+    for param in model.parameters():
+        param.requires_grad = False
     classifier = nn.Sequential(OrderedDict([
                           ('fc1', nn.Linear(25088, hidden_units)),
                           ('relu', nn.ReLU(inplace=True)),
@@ -39,6 +36,7 @@ def save_checkpoint(model,optimizer,epochs,image_input,learning_rate, model_name
                   'class_to_idx': model.class_to_idx,
                   'model_name': model_name,
                   'learning_rate': learning_rate,
+                  'classifier': model.classifier,
                   }
     torch.save(checkpoint, 'checkpoint.pth')
 
@@ -46,6 +44,7 @@ def load_checkpoint(checkpoint_loc = 'checkpoint.pth'):
     checkpoint = torch.load(checkpoint_loc)
     model_name = checkpoint['model_name']
     model = build_model(model_name=model_name , hidden_units= checkpoint['hidden_units'])
+    model.classifier = checkpoint['classifier']
     model.load_state_dict(checkpoint['state_dict'])
     model.class_to_idx = checkpoint['class_to_idx']
     return model

@@ -12,3 +12,4 @@ python predict.py flowers/test/10/image_07090.jpg checkpoint --gpu --top_k 5
 predict.py will generate:
 1. Prediction and the top 5 prediction's probabilities. 
 2. .png image with top_k classes and the image of the predicted image
+![Outout sample](https://github.com/prabhupad26/aipnd_prabhu/blob/master/image_classifier.png)

@@ -1,10 +1,7 @@
 import numpy as np
 from torchvision import datasets,transforms, models
-import torch
+import torch, os, json, argparse
 from torch import nn,optim
-import os
-import json
-import argparse
 from collections import OrderedDict
 def main():
     input_arguments = input_argparse()

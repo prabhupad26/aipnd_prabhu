@@ -1,10 +1,8 @@
 from PIL import Image
 import matplotlib.pyplot as plt
 from torchvision import datasets,transforms, models
-import torch, json, argparse
+import torch, json, argparse, train, os
 import numpy as np
-import argparse, train
-import os
 def main():
     input_arguments = input_argparse()
     im = Image.open(input_arguments.input_image_path)

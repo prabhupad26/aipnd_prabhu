@@ -1,4 +1,4 @@
-# Flow type prediction with deep learning:
+# Flower type prediction with deep learning:
 
 * Objective : Train an image classifier to recognize different species of flowers, with input image of size 224 x 224 .
 
